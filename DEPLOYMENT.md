@@ -11,7 +11,7 @@ Output: `dist/` (~430 kB gzipped JS + fonts). Serve it from any static host with
 ## Requirements
 - **HTTPS** — WebXR (and therefore Quest VR) only works on secure origins (or `localhost`).
 - SPA rewrite: every unknown path → `/index.html`.
-- Recommended headers: `Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net; worker-src 'self' blob:`
+- Recommended headers (as shipped in `vercel.json`): `Content-Security-Policy: default-src 'self'; script-src 'self' blob:; font-src 'self' data:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net; worker-src 'self' blob:`
   (`cdn.jsdelivr.net` is used by the XR library to load Quest controller/hand models; self-host
   `@webxr-input-profiles/assets` later to drop it), `Permissions-Policy: xr-spatial-tracking=(self)`,
   `Referrer-Policy: no-referrer`.
@@ -25,5 +25,5 @@ Output: `dist/` (~430 kB gzipped JS + fonts). Serve it from any static host with
 
 ## Hosting options (need your approval — external accounts)
 Any static host works (Vercel, Netlify, Cloudflare Pages, GitHub Pages with a 404→index fallback).
-No deployment has been made yet. Phase 5 will add a Node API + PostgreSQL; that requires choosing a provider and
+Deployed on Vercel (project wonderworld-vr, git-connected: a push to main deploys https://wonderworld-vr.vercel.app). troika (3D text) needs `script-src blob:` for its worker and `font-src data:`. Phase 5 will add a Node API + PostgreSQL; that requires choosing a provider and
 creating accounts, which I will not do without explicit approval.

@@ -1,0 +1,48 @@
+@import 'tailwindcss';
+@import '@fontsource/fredoka/400.css';
+@import '@fontsource/fredoka/500.css';
+@import '@fontsource/fredoka/600.css';
+
+@theme {
+  --font-sans: 'Fredoka', ui-rounded, system-ui, sans-serif;
+  --color-ink: #1f2a44;
+  --color-muted: #64748b;
+  --color-grape: #6c5ce7;
+  --color-tangerine: #ff8a3d;
+  --color-sun: #ffd166;
+  --color-mint: #06d6a0;
+  --color-berry: #ef476f;
+  --color-sky: #118ab2;
+  --color-cloud: #f6f7ff;
+  --radius-blob: 1.75rem;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: linear-gradient(180deg, #e8f4ff 0%, #fff6ec 100%);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+canvas {
+  touch-action: none;
+}
+:focus-visible {
+  outline: 3px solid var(--color-grape);
+  outline-offset: 3px;
+  border-radius: 0.75rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

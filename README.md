@@ -3,6 +3,8 @@
 An educational 3D/VR learning app for children aged 5–12. Children learn maths by **grabbing, counting and
 moving real 3D objects** — in a desktop browser, on a phone or tablet, or inside a Meta Quest headset (WebXR).
 
+**Live:** https://wonderworld-vr.vercel.app (HTTPS, so Enter VR works in Meta Quest Browser)
+
 **Status: v0.1.0 — first playable MVP** (Phases 1–3 of the roadmap). See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## What works today

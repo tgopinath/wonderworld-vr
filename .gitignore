@@ -9,3 +9,5 @@ playwright-report
 .DS_Store
 .shots-*
 .vercel
+.env*
+!.env.example

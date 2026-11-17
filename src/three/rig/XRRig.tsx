@@ -1,22 +1,19 @@
 // VR player rig: XR origin placed at the player position, snap/smooth turning around the head,
-// teleport landing handled by <Teleportable> floors, optional comfort vignette.
+// thumbstick-gated teleport arcs (landing handled by the Studio floor), optional comfort vignette.
 import { useFrame, useThree } from '@react-three/fiber'
 import { XROrigin, useXRControllerLocomotion } from '@react-three/xr'
 import { useEffect, useRef } from 'react'
 import { MathUtils, Vector3, type Group, type Mesh, type MeshBasicMaterial } from 'three'
-import { useAppStore } from '@/state/appStore'
+import { useLab } from '@/state/labStore'
 import { usePlayerStore } from '@/state/playerStore'
 import { setControllerTeleport, xrStore } from '../xr'
 
 const head = new Vector3()
 
-/** Seated players get a small lift so table-top activities stay within comfortable reach. */
-export const SEATED_LIFT = 0.25
-
 export function XRRig() {
   const origin = useRef<Group>(null)
   const camera = useThree((s) => s.camera)
-  const comfort = useAppStore((s) => s.settings.comfort)
+  const comfort = useLab((s) => s.comfort)
   const turning = useRef(0)
 
   const arc = useRef({ left: false, right: false })
@@ -65,7 +62,7 @@ export function XRRig() {
     const o = origin.current
     if (!o) return
     const p = usePlayerStore.getState()
-    o.position.set(p.x, comfort.mode === 'seated' ? SEATED_LIFT : 0, p.z)
+    o.position.set(p.x, 0, p.z)
     o.rotation.set(0, p.yaw, 0)
   })
 

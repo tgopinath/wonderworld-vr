@@ -8,6 +8,7 @@ import { useView, type ClipAxis } from '@/state/viewStore'
 import { getIndex, getStructure, loadIndex } from '@/state/indexData'
 import { detectXRSupport, type XRSupport } from '@/three/xrSupport'
 import { Button, ErrorBoundary, Logo, Spinner, fmtInt, webglAvailable } from './ui'
+import { FunctionsPanel, PartsPanel, ViewButtons } from './LabPanels'
 
 const LabCanvas = lazy(() => import('@/three/LabCanvas'))
 
@@ -31,17 +32,28 @@ export function LabPage() {
     <div className="fixed inset-0 flex flex-col">
       <TopBar />
       <div className="relative flex min-h-0 flex-1">
-        <aside className="scroll-thin z-10 hidden w-72 shrink-0 overflow-y-auto border-r border-line bg-panel/95 md:block">{ready && <LeftPanel />}</aside>
+        <aside className="z-10 hidden w-72 shrink-0 flex-col border-r border-line bg-panel/95 md:flex">{ready && <LeftTabs />}</aside>
         <main className="relative min-w-0 flex-1">
           <ErrorBoundary>
             <Suspense fallback={<CenterNote><Spinner label="Loading the 3D viewer…" /></CenterNote>}>{ready && <LabCanvas />}</Suspense>
           </ErrorBoundary>
           <LayerLoading />
           <Toolbar />
+          <div className="absolute right-3 top-3 rounded-lg border border-line bg-panel/95 p-0.5 shadow-xl max-md:top-11">
+            <ViewButtons />
+          </div>
           <MobileSystems />
         </main>
         <aside className="scroll-thin z-10 w-80 shrink-0 overflow-y-auto border-l border-line bg-panel/95 max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:max-h-[45%] max-md:w-auto max-md:border-l-0 max-md:border-t">
-          {ready && (mode === 'study' ? <StudyPanel /> : <DetailsPanel />)}
+          {ready &&
+            (mode === 'study' ? (
+              <StudyPanel />
+            ) : (
+              <>
+                <DetailsPanel />
+                <FunctionsPanel />
+              </>
+            ))}
         </aside>
       </div>
     </div>
@@ -189,11 +201,33 @@ function SystemRow({ id }: { id: SystemId }) {
   )
 }
 
+function LeftTabs() {
+  const [tab, setTab] = useState<'systems' | 'parts'>('systems')
+  return (
+    <>
+      <div className="flex shrink-0 border-b border-line" role="tablist" aria-label="Browse">
+        {(
+          [
+            ['systems', 'Systems'],
+            ['parts', 'Parts'],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`flex-1 py-2.5 text-[13px] font-medium ${tab === id ? 'border-b-2 border-accent text-ink' : 'text-mute hover:text-ink'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">{tab === 'systems' ? <LeftPanel /> : <PartsPanel />}</div>
+    </>
+  )
+}
+
 function LeftPanel() {
   const bookmarks = useLab((s) => s.bookmarks)
   return (
     <div>
       <h2 className="px-4 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-faint">Body systems</h2>
+      <p className="px-4 pb-2 text-[11px] text-faint">Or open “Parts” to add organs and structures one by one.</p>
       <ul>
         {SYSTEMS.map((s) => (
           <SystemRow key={s.id} id={s.id} />

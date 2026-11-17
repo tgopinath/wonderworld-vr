@@ -29,7 +29,7 @@ export async function openLab(page: Page, path = '/lab') {
 
 export async function waitFrames(page: Page, n: number) {
   const start = await al<number>(page, 'frames')
-  await expect.poll(() => al<number>(page, 'frames'), { timeout: 30_000 }).toBeGreaterThanOrEqual(start + n)
+  await expect.poll(() => al<number>(page, "frames"), { timeout: 90_000 }).toBeGreaterThanOrEqual(start + n)
 }
 
 /** Wait for the orbit camera to stop moving (fit/focus animations). */

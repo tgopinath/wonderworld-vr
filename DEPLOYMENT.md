@@ -5,13 +5,13 @@ The MVP is a static single-page app (no server, no environment variables).
 ```bash
 npm run build
 ```
-Output: `dist/` (~430 kB gzipped JS + fonts). Serve it from any static host with an SPA fallback to `index.html`
-(routes: `/`, `/profiles`, `/worlds`, `/play`, `/parent`, `/settings`, `/privacy`).
+Output: `dist/` (~600 kB gzipped JS incl. the structure index, plus fonts, Draco decoder and models). Serve it from any static host with an SPA fallback to `index.html`
+(routes: `/`, `/lab`, `/about`). `/models/` (≈19 MB of GLB) and `/draco/` must be served as files, not rewritten.
 
 ## Requirements
 - **HTTPS** — WebXR (and therefore Quest VR) only works on secure origins (or `localhost`).
 - SPA rewrite: every unknown path → `/index.html`.
-- Recommended headers (as shipped in `vercel.json`): `Content-Security-Policy: default-src 'self'; script-src 'self' blob:; font-src 'self' data:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net; worker-src 'self' blob:`
+- Recommended headers (as shipped in `vercel.json`): `Content-Security-Policy: default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; font-src 'self' data:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net; worker-src 'self' blob:`
   (`cdn.jsdelivr.net` is used by the XR library to load Quest controller/hand models; self-host
   `@webxr-input-profiles/assets` later to drop it), `Permissions-Policy: xr-spatial-tracking=(self)`,
   `Referrer-Policy: no-referrer`.
@@ -25,5 +25,5 @@ Output: `dist/` (~430 kB gzipped JS + fonts). Serve it from any static host with
 
 ## Hosting options (need your approval — external accounts)
 Any static host works (Vercel, Netlify, Cloudflare Pages, GitHub Pages with a 404→index fallback).
-Deployed on Vercel (project wonderworld-vr, git-connected: a push to main deploys https://wonderworld-vr.vercel.app). troika (3D text) needs `script-src blob:` for its worker and `font-src data:`. Phase 5 will add a Node API + PostgreSQL; that requires choosing a provider and
+Deployed on Vercel (project wonderworld-vr, git-connected: a push to main deploys https://wonderworld-vr.vercel.app). troika (3D text) needs `script-src blob:` and `font-src data:`; the Draco decoder needs `'wasm-unsafe-eval'`. Phase 5 will add a Node API + PostgreSQL; that requires choosing a provider and
 creating accounts, which I will not do without explicit approval.

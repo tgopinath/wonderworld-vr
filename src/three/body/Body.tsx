@@ -105,7 +105,10 @@ export function Body() {
   }, [gl])
 
   const pick = (e: ThreeEvent<PointerEvent | MouseEvent>): string | null => {
-    const hits: Intersection[] = (e as unknown as { intersections?: Intersection[] }).intersections ?? [e as unknown as Intersection]
+    // Mouse/touch (R3F) events carry every hit in `intersections`; XR pointer events carry their hit in
+    // `intersection` (their `intersections` list is empty).
+    const ev = e as unknown as { intersections?: Intersection[]; intersection?: Intersection }
+    const hits: Intersection[] = ev.intersections?.length ? ev.intersections : ev.intersection ? [ev.intersection] : [e as unknown as Intersection]
     const clipping = useView.getState().clip.axis !== 'none'
     for (const it of hits) {
       const o = it.object
@@ -129,7 +132,7 @@ export function Body() {
       onPointerOut={() => useView.getState().hover(null)}
       onClick={(e) => {
         e.stopPropagation()
-        if ((e.delta ?? 0) > 6) return // a drag to orbit, not a click
+        if (dragDistance(e) > 6) return // a drag to orbit, not a click
         const id = pick(e)
         const v = useView.getState()
         if (v.mode === 'study' && v.question?.mode === 'locate' && !v.question.result) v.answerLocate(getStructure(id))
@@ -152,3 +155,12 @@ function isShown(o: Object3D | null): boolean {
   return true
 }
 
+
+/** Pixels moved between press and release. XR pointer events have no screen delta (reading it throws). */
+function dragDistance(e: { delta?: number }): number {
+  try {
+    return e.delta ?? 0
+  } catch {
+    return 0
+  }
+}

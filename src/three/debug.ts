@@ -1,6 +1,6 @@
 // Test/debug bridge: lets Playwright find where structures are on screen so it can perform REAL
 // pointer input. Exposed only in dev builds or when ?e2e is in the URL. Read-only (plus exitVR).
-import { Raycaster, Vector2, Vector3, type Camera, type Mesh, type Scene } from 'three'
+import { Raycaster, Vector2, Vector3, type Camera, type Mesh, type Object3D, type Scene } from 'three'
 import { center } from '@/engine/anatomy'
 import { getStructure } from '@/state/indexData'
 import { useView } from '@/state/viewStore'
@@ -13,6 +13,16 @@ let camera: Camera | null = null
 let scene: Scene | null = null
 let canvas: HTMLCanvasElement | null = null
 let frames = 0
+const vrButtons = new Map<string, Object3D>()
+
+/** VR panel buttons register here so emulator tests can aim at them. */
+export function registerVrButton(label: string, obj: Object3D) {
+  if (!debugEnabled) return () => {}
+  vrButtons.set(label, obj)
+  return () => {
+    if (vrButtons.get(label) === obj) vrButtons.delete(label)
+  }
+}
 
 export const debugEnabled = typeof window !== 'undefined' && (import.meta.env.DEV || new URLSearchParams(window.location.search).has('e2e'))
 
@@ -26,11 +36,28 @@ const ray = new Raycaster()
 const ndc = new Vector2()
 const w = new Vector3()
 
+/** Id of the first visible structure under a screen point (normalised device coordinates). */
+function firstSid(x: number, y: number): string | null {
+  if (!camera || !scene) return null
+  ndc.set(x, y)
+  ray.setFromCamera(ndc, camera)
+  const hit = ray.intersectObjects(scene.children, true).find((h) => {
+    for (let n: typeof h.object | null = h.object; n; n = n.parent) if (!n.visible) return false
+    return !!h.object.userData.sid
+  })
+  return (hit?.object.userData.sid as string | undefined) ?? null
+}
+
 /**
  * A screen point where the structure is the first visible thing under the pointer: samples vertices
- * of its meshes and ray-tests each from the camera. Null if it is fully hidden.
+ * of its meshes and ray-tests each from the camera. Prefers points well inside the silhouette
+ * (four neighbours ~4 px away also hit it); falls back to any hit for tiny parts. Null if fully hidden.
  */
 function visiblePoint(id: string) {
+  return pointOn(id, true) ?? pointOn(id, false)
+}
+
+function pointOn(id: string, strict: boolean) {
   if (!camera || !canvas || !scene) return null
   const list = meshesOf(id)
   const r = canvas.getBoundingClientRect()
@@ -41,13 +68,11 @@ function visiblePoint(id: string) {
       w.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld)
       v.copy(w).project(camera)
       if (Math.abs(v.x) > 0.95 || Math.abs(v.y) > 0.95 || v.z > 1) continue
-      ndc.set(v.x, v.y)
-      ray.setFromCamera(ndc, camera)
-      const hit = ray.intersectObjects(scene.children, true).find((h) => {
-        for (let n: typeof h.object | null = h.object; n; n = n.parent) if (!n.visible) return false
-        return !!h.object.userData.sid
-      })
-      if (hit?.object.userData.sid === id) return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height }
+      const px = 8 / r.width
+      const py = 8 / r.height
+      const probes = strict ? [[0, 0], [px, 0], [-px, 0], [0, py], [0, -py]] : [[0, 0]]
+      const ok = probes.every(([dx, dy]) => firstSid(v.x + dx!, v.y + dy!) === id)
+      if (ok) return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height }
     }
   }
   return null
@@ -70,7 +95,7 @@ if (debugEnabled) {
     frames: () => frames,
     view: () => {
       const s = useView.getState()
-      return { selectedId: s.selectedId, mode: s.mode, isolated: s.isolated, hidden: s.hidden, clip: s.clip, loading: s.loading, question: s.question, inXR: s.inXR }
+      return { anim: s.anim, selectedId: s.selectedId, hoveredId: s.hoveredId, mode: s.mode, isolated: s.isolated, hidden: s.hidden, clip: s.clip, loading: s.loading, question: s.question, inXR: s.inXR }
     },
     lab: () => {
       const s = useLab.getState()
@@ -83,6 +108,18 @@ if (debugEnabled) {
       return s ? project(new Vector3(...center(s))) : null
     },
     visiblePoint,
+    /** Ids of structures currently rendered (visible meshes in visible layers). */
+    visibleIds: () => {
+      const out = new Set<string>()
+      scene?.traverse((o) => {
+        if (!o.userData.sid) return
+        for (let n: Object3D | null = o; n; n = n.parent) if (!n.visible) return
+        out.add(o.userData.sid as string)
+      })
+      return [...out].sort()
+    },
+    meshScale: (id: string) => meshesOf(id)[0]?.scale.x ?? null,
+    vrButton: (label: string) => vrButtons.get(label)?.getWorldPosition(new Vector3()).toArray() ?? null,
     world: (id: string) => {
       const s = getStructure(id)
       return s ? center(s) : null

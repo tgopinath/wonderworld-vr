@@ -33,8 +33,9 @@ function setMat(list: Mesh[], mat: Material | null) {
 
 /** Re-apply visibility for every registered mesh (isolate / hide / layer toggles). */
 export function applyVisibility() {
-  const { isolated, hidden } = useView.getState()
-  const iso = isolated ? new Set(isolated) : null
+  const { isolated, hidden, buildMode } = useView.getState()
+  const built = useLab.getState().built
+  const iso = isolated ? new Set(isolated) : buildMode ? new Set(built) : null
   const hid = new Set(hidden)
   for (const [id, list] of meshes) {
     const v = (!iso || iso.has(id)) && !hid.has(id)
@@ -66,9 +67,10 @@ export function refreshAll() {
 }
 
 useView.subscribe((s, p) => {
-  if (s.isolated !== p.isolated || s.hidden !== p.hidden) applyVisibility()
+  if (s.isolated !== p.isolated || s.hidden !== p.hidden || s.buildMode !== p.buildMode) applyVisibility()
   if (s.selectedId !== p.selectedId || s.hoveredId !== p.hoveredId || s.question !== p.question) applyHighlight()
 })
 useLab.subscribe((s, p) => {
   if (s.systems !== p.systems) applyHighlight()
+  if (s.built !== p.built && useView.getState().buildMode) applyVisibility()
 })

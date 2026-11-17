@@ -1,37 +1,16 @@
 # Testing
 
-## Automated
-| Layer | Tool | Command | Covers |
-|---|---|---|---|
-| Unit | Vitest (jsdom) | `npm test` | Round generation for every activity × level, validation (counting/recognition/addition/subtraction), hints, adaptive difficulty, rewards (stars, badges, daily goal, streaks, medal), interaction state machine, zone geometry, LocalRepository (round-trip, corrupt data), PIN hashing, store round completion + profile deletion |
-| Browser | Playwright + installed Chrome | `npm run test:e2e` | Welcome → profile → classroom; keyboard walking; locked worlds inert; parent gate; **counting with real mouse drags** (wrong → hint → right → reward → reload persists); **addition with real drags** (wrong number → hint → right number → stars) → parent dashboard shows the saved round |
-| WebXR emulator | Playwright + IWER Quest 3 | `npm run test:e2e` (`xr.spec.ts`) | Enter VR, teleport, ray select portal + board button, grip grab → carry → release into basket, exit VR |
+| Layer | Command | Covers |
+|---|---|---|
+| Unit (Vitest) | `npm test` | Index integrity (life-size, orientation, unique ids), every study note maps to a real part, names/pairs, search ranking, neighbours, body areas, quiz deck/options/locate, Leitner scheduling, cardiac + breathing timing, heart and lung grouping |
+| Browser (Playwright, installed Chrome) | `npm run test:e2e` | Landing → lab; real click on the femur → details, isolate/hide/show all; search loads the right layer, bookmark persists after reload; layers + cross-section; build-your-own (add/remove parts, only those render, persists); heartbeat phases + mesh actually moves, breathing; standard views; locate quiz by clicking the model; identify quiz wrong → explained → next, progress persists |
+| WebXR emulator | (part of `test:e2e`) | Enter VR, teleport, ray-select, VR panel isolate + heartbeat, exit |
 
-Current result (2026-11-17): **46/46 unit tests, 6/6 browser tests passing**; typecheck and lint clean.
+Last full run on 2026-11-17: 16/16 unit; browser suite 8/10 in one pass, with all 10 passing when run
+individually. The two that failed in the full pass (animations, and the VR flow's final heartbeat step) load the
+2.5 M-triangle cardiovascular layer under software WebGL while the machine was at load average ~150 from other
+software, and hit time-outs.
+Software WebGL renders only a few fps, so helpers wait on rendered frames (`__al.frames()`), not sleeps.
 
-Notes:
-- E2E uses the installed Google Chrome (`channel: 'chrome'`) with SwiftShader WebGL. Set `PW_CHANNEL=` to use
-  Playwright's own Chromium (`npx playwright install chromium` first).
-- Headless software WebGL renders ~6 fps; helpers wait on the camera glide and on rendered frames
-  (`__ww.frames()`), never on fixed sleeps alone.
-- Tests read object positions from the read-only `window.__ww` bridge, then perform real pointer input.
-
-## Manual checks done (desktop Chrome, in-app browser)
-Welcome, profile creation, worlds page, classroom render, Maths portal, counting (drag + tap-to-place + hint +
-success), addition (combine + answer), find-the-number wrong answer → hint, parent gate + PIN + dashboard data,
-progress persisted after reload.
-
-## Not yet done
-- Physical Meta Quest (see the on-device checklist in VR_INTERACTIONS.md).
-- Physical phones/tablets (touch flows are implemented and use the same pointer path).
-- Subtraction has unit coverage and the same UI path as addition, but no e2e test yet.
-- Accessibility audit with a screen reader; colour-contrast audit of 3D labels.
-
-## Performance budgets (to verify on Quest 2/3)
-- ≥ 72 fps; ≤ 150 draw calls; ≤ 300k triangles per scene; one shadow-casting light, 1024² shadow map.
-- Repeated scenery is instanced (books, trees, fence, confetti); item geometries/materials are shared module-level.
-- Worlds are code-split (`MathWorldScene` loads on demand); emulator code is stripped from production builds.
-- No React state updates inside `useFrame`; per-frame work mutates refs only.
-- Fixed foveation 1.0 and `frameRate: 'high'` requested on Quest.
-How to profile: Quest Browser → chrome://inspect from a desktop Chrome, Performance panel; OVR Metrics Tool for
-GPU/CPU level and frame timing.
+`window.__al` (dev builds or `?e2e`) is a read-only bridge: structure screen/world positions, a visible click
+point on a part, current view/lab state, rendered frame count, XR poses, and `exitVR`.

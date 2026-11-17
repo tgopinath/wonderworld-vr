@@ -1,14 +1,14 @@
 // WebXR emulator test (IWER, Meta Quest 3 profile). Drives emulated controllers to:
-// enter VR → ray + trigger on the Maths portal → ray + trigger on a board button →
-// grip-grab an object, carry it into the basket, release → engine records the placement → exit VR.
+// enter VR → teleport → ray + trigger on a bone to select it → ray + trigger on the VR panel's
+// "Isolate" button → exit VR.
 // This verifies the shared interaction code path for XR input. It does NOT replace on-device Quest testing.
 import { expect, test, type Page } from '@playwright/test'
-import { createProfile, roundInfo, settle } from './helpers'
+import { openLab, view } from './helpers'
 
 type V3 = [number, number, number]
 
 const ww = <T,>(page: Page, fn: string, ...args: unknown[]) =>
-  page.evaluate(([f, a]) => (window as unknown as { __ww: Record<string, (...x: unknown[]) => unknown> }).__ww[f as string]!(...(a as unknown[])), [fn, args] as const) as Promise<T>
+  page.evaluate(([f, a]) => (window as unknown as { __al: Record<string, (...x: unknown[]) => unknown> }).__al[f as string]!(...(a as unknown[])), [fn, args] as const) as Promise<T>
 
 /** Controller poses are relative to the XR origin (player position, yaw 0 in these tests). */
 async function toLocal(page: Page, world: V3): Promise<V3> {
@@ -62,85 +62,71 @@ async function waitFrames(page: Page, n: number) {
   await expect.poll(() => ww<number>(page, 'frames'), { timeout: 30_000 }).toBeGreaterThanOrEqual(start + n)
 }
 
-async function moveTo(page: Page, hand: 'left' | 'right', world: V3) {
-  const local = await toLocal(page, world)
-  await page.evaluate(
-    ([h, p]) => {
-      const c = (window as unknown as { __iwer: { controllers: Record<string, { position: { set(...v: number[]): void }; quaternion: { set(...v: number[]): void } }> } }).__iwer.controllers[h as string]!
-      const v = p as number[]
-      c.position.set(v[0]!, v[1]!, v[2]!)
-      c.quaternion.set(0, 0, 0, 1)
-    },
-    [hand, local] as const,
-  )
-  await wiggle(page, hand)
-}
-
-async function button(page: Page, hand: 'left' | 'right', id: 'trigger' | 'squeeze', value: 0 | 1, waitMs = 350) {
-  await page.evaluate(([h, b, v]) => (window as unknown as { __iwer: { controllers: Record<string, { updateButtonValue(id: string, v: number): void }> } }).__iwer.controllers[h as string]!.updateButtonValue(b as string, v as number), [hand, id, value] as const)
-  await waitFrames(page, 4)
-  await page.waitForTimeout(waitMs)
-}
-
-/** A quick trigger pull (a "click" must finish within the pointer library's click threshold). */
+/** A trigger pull held for two rendered frames, so it is sampled at any frame rate (and stays under the 700 ms click window). */
 async function click(page: Page, hand: 'left' | 'right') {
   await page.evaluate(async (h) => {
-    const c = (window as unknown as { __iwer: { controllers: Record<string, { updateButtonValue(id: string, v: number): void }> } }).__iwer.controllers[h]!
+    const w = window as unknown as { __iwer: { controllers: Record<string, { updateButtonValue(id: string, v: number): void }> }; __al: { frames(): number } }
+    const c = w.__iwer.controllers[h]!
+    const until = async (n: number) => {
+      const start = w.__al.frames()
+      while (w.__al.frames() < start + n) await new Promise((r) => setTimeout(r, 10))
+    }
     c.updateButtonValue('trigger', 1)
-    await new Promise((r) => setTimeout(r, 250))
+    await until(2)
     c.updateButtonValue('trigger', 0)
+    await until(2)
   }, hand)
-  await page.waitForTimeout(500)
 }
 
-test('VR (emulated Quest 3): ray select, grip grab and release, exit', async ({ page }) => {
-  test.setTimeout(180_000) // software-rendered WebXR runs at a few fps
-  await createProfile(page, 'VRKid')
-  await page.goto('/play?xr=emulate&xrui=off')
-  await settle(page)
+test('VR (emulated Quest 3): teleport, ray-select a bone, use the VR panel, exit', async ({ page }) => {
+  test.setTimeout(240_000) // software-rendered WebXR runs at a few fps
+  await openLab(page, '/lab?xr=emulate&xrui=off')
   await page.getByTestId('enter-vr').click()
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __ww: { xrVisibility(): string | undefined } }).__ww.xrVisibility())).toBe('visible')
-
+  await expect.poll(() => ww<string | undefined>(page, 'xrVisibility'), { timeout: 30_000 }).toBe('visible')
   await expect.poll(async () => (await ww<unknown[]>(page, 'xr')).length, { timeout: 30_000 }).toBe(2) // both controllers tracked
 
-  // Teleport: push the left stick forward (arc appears), aim at the floor, pull the trigger, let go.
+  // Teleport: push the left stick forward (arc appears), aim at the floor beside the body, pull the trigger.
   const before = await ww<{ x: number; z: number }>(page, 'player')
-  await page.evaluate(() => (window as unknown as { __iwer: { controllers: Record<string, { updateAxes(id: string, x: number, y: number): void }> } }).__iwer.controllers.left!.updateAxes('thumbstick', 0, -1))
+  const stick = (y: number) => page.evaluate((v) => (window as unknown as { __iwer: { controllers: Record<string, { updateAxes(id: string, x: number, y: number): void }> } }).__iwer.controllers.left!.updateAxes('thumbstick', 0, v), y)
+  const moved = async () => {
+    const p = await ww<{ x: number; z: number }>(page, 'player')
+    return Math.hypot(p.x - before.x, p.z - before.z)
+  }
+  for (let attempt = 0; attempt < 3 && (await moved()) < 0.5; attempt++) {
+    await stick(-1)
+    await waitFrames(page, 4)
+    await aim(page, 'left', [-0.2, 1.2, -0.2], [before.x - 1.0, 0, before.z - 1.0])
+    await click(page, 'left')
+    await stick(0)
+    await waitFrames(page, 4)
+  }
+  expect(await moved()).toBeGreaterThan(0.5)
   await waitFrames(page, 4)
-  await aim(page, 'left', [-0.2, 1.2, -0.2], [before.x - 0.2, 0, before.z - 1.6])
-  await click(page, 'left')
-  await page.evaluate(() => (window as unknown as { __iwer: { controllers: Record<string, { updateAxes(id: string, x: number, y: number): void }> } }).__iwer.controllers.left!.updateAxes('thumbstick', 0, 0))
-  await expect.poll(async () => (await ww<{ z: number }>(page, 'player')).z, { timeout: 15_000 }).toBeLessThan(before.z - 0.5)
-  await waitFrames(page, 4)
 
-  // Ray + trigger on the Maths portal.
-  const portal = await ww<V3>(page, 'world', 'portal:math')
-  await aim(page, 'right', [0.2, 1.2, -0.2], portal)
+  // Ray + trigger on the skull (any skull bone the ray meets first counts as a selection).
+  const skull = await ww<V3>(page, 'world', 'skeletal:Frontal bone')
+  await aim(page, 'right', [0.2, 1.3, -0.2], skull)
   await click(page, 'right')
-  await expect.poll(async () => (await roundInfo(page)).scene, { timeout: 30_000 }).toBe('math')
-  await expect.poll(async () => (await roundInfo(page)).loading, { timeout: 60_000 }).toBe(false)
 
-  // Ray + trigger on the "Counting" board button.
-  await expect.poll(() => ww<V3 | null>(page, 'world', 'activity:counting')).not.toBeNull()
-  const btn = await ww<V3>(page, 'world', 'activity:counting')
-  await aim(page, 'right', [0.2, 1.2, -0.2], btn)
+  await expect.poll(async () => (await view(page)).selectedId ?? '', { timeout: 30_000 }).toMatch(/^skeletal:(Frontal|Parietal|Temporal|Occipital|Sphenoid|Zygomatic)/)
+  const picked = (await view(page)).selectedId!
+
+  // The in-VR panel shows the selection; its Isolate button works with the ray too.
+  const panelIsolate = await ww<V3 | null>(page, 'vrButton', 'Isolate')
+  expect(panelIsolate).not.toBeNull()
+  await aim(page, 'right', [0.2, 1.3, -0.2], panelIsolate!)
   await click(page, 'right')
-  await expect.poll(async () => (await roundInfo(page)).round?.type, { timeout: 30_000 }).toBe('counting')
-  await page.waitForTimeout(800) // XR rig steps up to the table
+  await expect.poll(async () => (await view(page)).isolated, { timeout: 30_000 }).toEqual([picked])
 
-  // Grip-grab one object from the pile, carry it into the basket, release.
-  const info = await roundInfo(page)
-  const item = info.round!.items[0]!.id
-  const itemPos = await ww<V3>(page, 'world', item)
-  await moveTo(page, 'right', [itemPos[0], itemPos[1] + 0.04, itemPos[2]])
-  await button(page, 'right', 'squeeze', 1)
-  const tray = await ww<V3>(page, 'zoneWorld', 'tray')
-  await moveTo(page, 'right', [tray[0], tray[1] + 0.12, tray[2]])
-  await moveTo(page, 'right', [tray[0], tray[1] + 0.06, tray[2]])
-  await button(page, 'right', 'squeeze', 0)
-  await expect.poll(async () => (await roundInfo(page)).placements?.[item], { timeout: 15_000 }).toBe('tray')
+  // Last (it loads the dense vessel layer, which slows software rendering): the panel's Heartbeat button.
+  const hb = await ww<V3>(page, 'vrButton', 'Heartbeat')
+  await aim(page, 'right', [0.2, 1.3, -0.2], hb)
+  await click(page, 'right')
+  await expect.poll(async () => ((await view(page)) as unknown as { anim: { heart: boolean } }).anim.heart, { timeout: 30_000 }).toBe(true)
 
-  // Exit VR safely via the session end path used by the 3D "Exit VR" button.
-  await page.evaluate(() => (window as unknown as { __ww: { exitVR(): void } }).__ww.exitVR())
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __ww: { xrVisibility(): string | undefined } }).__ww.xrVisibility())).toBeUndefined()
+
+
+  // Exit VR safely via the session end path used by the panel's "Exit VR" button.
+  await ww(page, 'exitVR')
+  await expect.poll(() => ww<string | undefined>(page, 'xrVisibility')).toBeUndefined()
 })

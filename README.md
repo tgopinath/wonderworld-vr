@@ -1,75 +1,63 @@
-# WonderWorld VR
+# Anatomy Lab
 
-An educational 3D/VR learning app for children aged 5–12. Children learn maths by **grabbing, counting and
-moving real 3D objects** — in a desktop browser, on a phone or tablet, or inside a Meta Quest headset (WebXR).
+A browser-based 3D/VR atlas of the human body for students. Explore 2,827 named structures from open
+anatomy data, layer by layer; cut cross-sections; build the body up organ by organ; watch the heart beat and
+the lungs breathe; and test yourself with spaced repetition — on a laptop, tablet or Meta Quest (WebXR).
 
-**Live:** https://wonderworld-vr.vercel.app (HTTPS, so Enter VR works in Meta Quest Browser)
+**Status: v0.2.0.** Not a medical device.
 
-**Status: v0.1.0 — first playable MVP** (Phases 1–3 of the roadmap). See [docs/ROADMAP.md](docs/ROADMAP.md).
+## Features
+- **7 body systems**, loaded on demand: skeletal, muscular, joints & ligaments, cardiovascular, nervous,
+  organs (visceral), lymphatic. Per-layer opacity; "only" to solo a layer.
+- **Every part is reachable**: search by name, or browse the **Parts** list by system and body area.
+- **Build your own body**: add organs and structures one by one ("Show only my parts"), or start from
+  "Add major organs". Your build is saved.
+- **Inspect any part**: click it → name, side, system, tissue group, extent in cm, a study note for ~50
+  key structures, mirror twin, and neighbouring structures (computed from the model). Focus, isolate,
+  hide, bookmark. The selection shows through see-through layers.
+- **Choice of view**: Front, Back, Left, Right, Top, Bottom (patient's sides), around the whole body or the
+  selected part; free orbit, pan and zoom.
+- **Cross-sections**: axial, sagittal and coronal cuts with a slider and flip; the camera turns to face the cut.
+- **Body in action**: heartbeat (atria then ventricles, 40–160 bpm, live phase + schematic ECG) and breathing
+  (lungs expand, diaphragm descends, 6–30/min). Simplified motion of the real parts with textbook timing.
+- **Study mode**: "Locate on model" and "Name the part" quizzes per system with Leitner spaced repetition;
+  distractors are nearby structures. Progress is saved.
+- **VR** (Meta Quest Browser): life-size body, ray + trigger to select, thumbstick-forward teleport, snap or
+  smooth turn, a panel that follows you (isolate, hide, layers, heartbeat, breathing, study answers, Exit VR).
 
-## What works today
-- Welcome screen with an animated 3D backdrop, device indicator and audio toggles.
-- Child profiles (nickname, age group, avatar only), several per device.
-- 3D classroom hub: furniture, instanced bookshelves, display board, Pip the guide robot, six world portals
-  (Maths is playable; the other five are clearly marked **Coming soon** and do nothing when tapped).
-- **Mathematics World** with four activities, all validated by the learning engine from the objects actually placed:
-  Counting · Find the Number · Adding Up · Taking Away.
-- Gentle hints after mistakes (level 1 then level 2), adaptive difficulty (5 levels per activity), effort-based stars,
-  coins, 10 badges, a daily goal, day streaks, a Maths medal and a 3D reward burst.
-- Desktop: WASD/arrows walk, Q/E turn, drag empty space to look, click the floor to walk, drag objects (or tap an
-  object, then tap a basket). Touch works the same way.
-- VR: Enter/Exit VR, ray + trigger select, grip grab/carry/release, push-stick-forward teleport, snap or smooth
-  turning, comfort vignette, seated/standing modes, haptics.
-- Parent corner behind a grown-up question + PIN: real saved progress, accuracy, tricky activities, recent rounds,
-  fixed-level overrides, session limits, break reminders, profile edit/delete, delete-all-data.
-- Local progress persistence (demo mode; no account; child data never leaves the device).
+## What the model does not include
+The open atlas is a single male body. It does not model skin, the larynx as one organ, ileum, caecum,
+rectum and anus, female reproductive organs, or breasts. The app says so rather than inventing shapes.
 
 ## Quick start
-Requires Node 22+ (tested on Node 24.20, npm 11.19).
+Node 22+.
 ```bash
 npm install
 ```
 ```bash
 npm run dev
 ```
-Open http://localhost:5193.
+Open http://localhost:5193 → **Open the lab**. VR without a headset (dev only): http://localhost:5193/lab?xr=emulate
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Vite dev server on port 5193 (WebXR emulator available) |
-| `npm run build` | Type-check and production build into `dist/` |
-| `npm run preview` | Serve the production build |
-| `npm run typecheck` / `npm run lint` | TypeScript strict check / ESLint |
-| `npm test` | Vitest unit tests (engine, persistence, stores) |
-| `npm run test:e2e` | Playwright browser tests incl. WebXR emulator (uses installed Google Chrome) |
+| `npm run dev` | Vite dev server (port 5193) |
+| `npm run build` | Type-check + production build into `dist/` |
 | `npm run check` | typecheck + lint + unit tests |
+| `npm run test:e2e` | Playwright tests (installed Google Chrome), incl. a WebXR emulator flow |
+| `node tools/build-index.mjs` | Rebuild `src/data/structures.json` from the GLB files |
 
-### Trying VR without a headset
-In dev, open **http://localhost:5193/play?xr=emulate** — this force-installs Meta's IWER emulator (Quest 3) with
-an on-screen panel to move the head and controllers. Press **Enter VR (emulator)**.
+## Data & licence
+Models: the seven system files from the open-source 3d-anatomy project, exported from Z-Anatomy, built on
+BodyParts3D. Combined licence **CC BY-NC-SA 4.0** (non-commercial). Full attributions on the in-app
+"Sources" page and in `public/models/License.txt`. App code: written for this project.
 
-### On a Meta Quest
-WebXR needs HTTPS (or localhost). See [DEPLOYMENT.md](DEPLOYMENT.md) for serving over HTTPS on your LAN and for
-static hosting.
+## Known limitations
+- VR is verified in Meta's IWER Quest 3 emulator, not yet on a physical headset.
+- Cardiovascular (~2.5 M triangles) and nervous (~1.4 M) layers are heavy on phones and standalone headsets.
+- Cut surfaces are open (hollow), not capped. Body areas are assigned from each part's position (approximate).
+- The parts browser and layer list are desktop/tablet panels; on phones, layers are toggled with chips.
+- In VR, controller/hand models load from the jsDelivr CDN (XR library default).
 
-## Supported devices
-| Device | Status |
-|---|---|
-| Desktop Chrome / Edge / Firefox / Safari | Tested in Chrome (manual + automated) |
-| Mobile browsers (touch) | Implemented (tap-to-walk, drag-to-look, tap-select-place). Not yet tested on physical phones |
-| Meta Quest 2 / 3 / Pro — Meta Quest Browser | Implemented and verified in the IWER Quest 3 emulator. **Not yet tested on a physical headset** |
-
-## Known limitations (honest list)
-- No backend yet: PostgreSQL, parent accounts and server auth are Phase 5 (needs your approval for hosting).
-  The parent PIN is a **local** gate (salted SHA-256 in localStorage), not account security.
-- Geography, Space, Science, Money and Puzzle worlds, multiplication and number puzzles are not built yet.
-- Hand tracking uses the XR library's default hand pointers (pinch to select/grab); it is not tuned or tested.
-- Narration uses the browser's speech synthesis — voice quality varies by device; captions are always shown.
-- Performance budgets are set (see TESTING.md) but have not been profiled on Quest hardware.
-- A wrong answer in a round the child abandons is not stored (rounds are recorded when completed).
-- In VR, controller/hand 3D models load from the jsDelivr CDN (library default). Self-hosting them is planned.
-
-## Documentation
-[ARCHITECTURE.md](ARCHITECTURE.md) · [docs/PRD.md](docs/PRD.md) · [docs/adr/0001-xr-framework.md](docs/adr/0001-xr-framework.md) ·
-[VR_INTERACTIONS.md](VR_INTERACTIONS.md) · [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) · [TESTING.md](TESTING.md) ·
-[DEPLOYMENT.md](DEPLOYMENT.md) · [CHANGELOG.md](CHANGELOG.md) · [CLAUDE.md](CLAUDE.md)
+Docs: [ARCHITECTURE.md](ARCHITECTURE.md) · [VR_INTERACTIONS.md](VR_INTERACTIONS.md) · [TESTING.md](TESTING.md) ·
+[DEPLOYMENT.md](DEPLOYMENT.md) · [CHANGELOG.md](CHANGELOG.md) · [docs/adr/0001-xr-framework.md](docs/adr/0001-xr-framework.md)

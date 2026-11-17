@@ -26,6 +26,8 @@ export interface Persisted {
   answered: number
   correct: number
   bookmarks: string[]
+  /** "Build your own body": parts the learner added one by one. */
+  built: string[]
   comfort: Comfort
 }
 
@@ -46,6 +48,7 @@ export function defaults(): Persisted {
     answered: 0,
     correct: 0,
     bookmarks: [],
+    built: [],
     comfort: { turn: 'snap', snapDegrees: 30, teleport: true, vignette: true },
   }
 }
@@ -64,6 +67,7 @@ export function load(storage: Pick<Storage, 'getItem'> | null = safeStorage()): 
       comfort: { ...base.comfort, ...p.comfort },
       cards: p.cards ?? {},
       bookmarks: Array.isArray(p.bookmarks) ? p.bookmarks : [],
+      built: Array.isArray(p.built) ? p.built : [],
     }
   } catch {
     return base
@@ -84,6 +88,8 @@ interface LabState extends Persisted {
   recordAnswer(key: string, card: CardState, correct: boolean): void
   startSession(): void
   toggleBookmark(id: string): void
+  toggleBuilt(id: string): void
+  setBuilt(ids: string[]): void
   setComfort(patch: Partial<Comfort>): void
   resetProgress(): void
 }
@@ -99,19 +105,31 @@ export const useLab = create<LabState>()((set) => ({
     set((s) => ({ cards: { ...s.cards, [key]: card }, answered: s.answered + 1, correct: s.correct + (correct ? 1 : 0) })),
   startSession: () => set((s) => ({ session: s.session + 1 })),
   toggleBookmark: (id) => set((s) => ({ bookmarks: s.bookmarks.includes(id) ? s.bookmarks.filter((b) => b !== id) : [...s.bookmarks, id] })),
+  toggleBuilt: (id) => set((s) => ({ built: s.built.includes(id) ? s.built.filter((b) => b !== id) : [...s.built, id] })),
+  setBuilt: (ids) => set({ built: [...new Set(ids)] }),
   setComfort: (patch) => set((s) => ({ comfort: { ...s.comfort, ...patch } })),
   resetProgress: () => set({ cards: {}, session: 0, answered: 0, correct: 0 }),
 }))
 
 let timer: ReturnType<typeof setTimeout> | undefined
-useLab.subscribe((s) => {
+
+function save() {
   clearTimeout(timer)
-  timer = setTimeout(() => {
-    const { version, systems, cards, session, answered, correct, bookmarks, comfort } = s
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version, systems, cards, session, answered, correct, bookmarks, comfort }))
-    } catch {
-      /* private mode / quota: keep in memory */
-    }
-  }, 200)
+  const { version, systems, cards, session, answered, correct, bookmarks, built, comfort } = useLab.getState()
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version, systems, cards, session, answered, correct, bookmarks, built, comfort }))
+  } catch {
+    /* private mode / quota: keep in memory */
+  }
+}
+
+useLab.subscribe(() => {
+  clearTimeout(timer)
+  timer = setTimeout(save, 200)
 })
+
+// Never lose the last change when the tab is closed or reloaded inside the debounce window.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', save)
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && save())
+}

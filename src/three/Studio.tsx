@@ -3,6 +3,8 @@
 import { ContactShadows, Environment, Lightformer } from '@react-three/drei'
 import { TeleportTarget } from '@react-three/xr'
 import { usePlayerStore, clampToBounds } from '@/state/playerStore'
+import { useLab } from '@/state/labStore'
+import { useView } from '@/state/viewStore'
 
 export function Studio() {
   return (
@@ -27,7 +29,7 @@ export function Studio() {
         <ringGeometry args={[0.54, 0.56, 96]} />
         <meshBasicMaterial color="#2dd4bf" transparent opacity={0.5} />
       </mesh>
-      <ContactShadows position={[0, 0.002, 0]} scale={2.4} blur={2.4} opacity={0.55} far={1.8} resolution={512} color="#000000" />
+      <StaticShadow />
 
       <TeleportTarget
         onTeleport={(p) => {
@@ -49,4 +51,15 @@ export function Studio() {
       <gridHelper args={[8, 32, '#1f2b37', '#16202a']} position={[0, -0.039, 0]} />
     </>
   )
+}
+
+/**
+ * Soft contact shadow under the body, rendered once and refreshed only when the visible layers change
+ * (re-rendering it every frame costs a full extra pass of a multi-million-triangle scene).
+ */
+function StaticShadow() {
+  const systems = useLab((s) => s.systems)
+  const loading = useView((s) => s.loading)
+  const key = JSON.stringify([Object.values(systems).map((v) => v.visible), loading])
+  return <ContactShadows key={key} frames={1} position={[0, 0.002, 0]} scale={2.4} blur={2.4} opacity={0.55} far={1.8} resolution={512} color="#000000" />
 }

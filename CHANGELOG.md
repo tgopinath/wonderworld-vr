@@ -1,24 +1,26 @@
 # Changelog
 
-## 0.1.0 — 2026-11-17 — First playable MVP (Phases 1–3)
+## 0.2.0 — 2026-11-17 — Anatomy Lab
+Replaces the children's maths app (0.1.0, still in git history) with a human-anatomy atlas on the same WebXR base.
+
 ### Added
-- Architecture docs, PRD, XR decision record (React Three XR v6 over Meta IWSDK), roadmap.
-- Pure TypeScript learning engine: round generation + validation for Counting, Find the Number, Adding Up,
-  Taking Away; two-level hints; adaptive difficulty (5 levels each); rewards (stars, coins, 10 badges, daily goal,
-  streaks, Maths medal); interaction state machine; drop-zone geometry.
-- Local persistence (versioned localStorage repository), parent PIN (salted SHA-256), Zustand stores.
-- 3D classroom hub (instanced bookshelves, desks, display board, portals, Pip guide), Mathematics World playground,
-  question board, procedural items and number blocks, 3D reward burst, spatial UI primitives.
-- Unified `Grabbable`/`DropZone` interaction for mouse, touch, XR ray, XR grip and hands; tap-to-place alternative.
-- Desktop rig (WASD/QE, drag-look, click-to-walk), XR rig (snap/smooth turn around the head, thumbstick-gated
-  teleport, comfort vignette, seated/standing), haptics, spatial sound effects, narration + captions, optional music.
-- Pages: welcome (animated 3D background, device indicator, audio), profiles, worlds, play HUD, parent dashboard,
-  settings (sound + VR comfort), privacy.
-- Tests: 46 unit tests; 6 Playwright tests including real-drag rounds and a WebXR emulator flow.
-- Dev-only `?xr=emulate` IWER Quest 3 emulator; production builds strip all emulator code.
+- 7 body systems / 2,827 named structures from BodyParts3D + Z-Anatomy (via 3d-anatomy, CC BY-NC-SA 4.0),
+  loaded on demand with local Draco decoding and BVH picking.
+- Explore: search, parts browser by system and body area, details (side, tissue, extent, notes, twin,
+  neighbours), focus / isolate / hide / bookmark, x-ray selection, per-layer opacity.
+- Build your own body: add parts one by one, "Show only my parts", "Add major organs"; saved.
+- Standard views (front, back, left, right, top, bottom) around the body or the selection.
+- Cross-sections (axial, sagittal, coronal) with the camera turning to face the cut.
+- Body in action: heartbeat with phases and schematic ECG; breathing with lungs and diaphragm.
+- Study: locate and identify quizzes with Leitner spaced repetition.
+- VR: life-size body, ray selection, thumbstick teleport (never into the body), panel that follows the player.
+- Landing page and Sources & licence page with all required attributions.
+- 16 unit tests; 10 Playwright tests incl. real clicks on the model and a WebXR emulator flow.
 
 ### Fixed during development
-- Clicks after a drag fell through to the floor (walk-away): pointer capture is now released explicitly and floor
-  walking requires the floor to be the first hit.
-- Teleport arc stole the trigger from UI in VR: arc now shows only while the stick is pushed forward.
-- Slow trigger presses weren't clicks: XR click threshold raised to 700 ms for children.
+- XR ray clicks did nothing: XR pointer events carry their hit in `intersection` and throw on `delta`.
+- The last change could be lost if the tab closed inside the save debounce; now flushed on page hide.
+- The floor contact shadow re-rendered the multi-million-triangle scene every frame; now only on layer change.
+- Vercel rewrites would have served `index.html` for models and the Draco decoder; CSP now allows WebAssembly.
+
+## 0.1.0 — 2026-11-17 — WonderWorld VR (children's maths MVP; superseded)

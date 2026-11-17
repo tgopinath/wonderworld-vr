@@ -12,6 +12,7 @@ import { Studio } from './Studio'
 import { Body } from './body/Body'
 import { CrossSection, BODY } from './body/CrossSection'
 import { VrPanel } from './VrPanel'
+import { Animator } from './body/Animator'
 import { debugEnabled, registerDebugView, tickDebugFrame } from './debug'
 
 export default function LabCanvas() {
@@ -31,6 +32,7 @@ export default function LabCanvas() {
         <Studio />
         <Body />
         <CrossSection />
+        <Animator />
         <Rig />
         <VrPanel />
         <DebugView />
@@ -85,7 +87,28 @@ function OrbitRig() {
     else if (axis === 'sagittal') void c.setLookAt(2.8 * f, 1.1, 0.4, 0, 0.95, 0, true)
     else void c.setLookAt(0.4, 1.1, 2.8 * f, 0, 0.95, 0, true)
   }, [axis, flip])
+  // Standard anatomical views around the current subject (the selection, or the whole body).
+  const preset = useView((s) => s.preset)
+  useEffect(() => {
+    const c = ref.current
+    if (!c || preset.n === 0) return
+    const s = getStructure(useView.getState().selectedId)
+    const t = s ? new Vector3((s.min[0] + s.max[0]) / 2, (s.min[1] + s.max[1]) / 2, (s.min[2] + s.max[2]) / 2) : new Vector3(0, 0.95, 0)
+    const d = Math.max(c.distance, s ? 0.4 : 2.6)
+    const dir = DIRS[preset.name]
+    void c.setLookAt(t.x + dir[0] * d, t.y + dir[1] * d, t.z + dir[2] * d, t.x, t.y, t.z, true)
+  }, [preset])
   return <CameraControls ref={ref} makeDefault smoothTime={0.35} />
+}
+
+/** Camera directions; "left"/"right" are the patient's sides (patient's left is +X). */
+const DIRS: Record<import('@/state/viewStore').ViewPreset, [number, number, number]> = {
+  front: [0, 0, 1],
+  back: [0, 0, -1],
+  left: [1, 0, 0],
+  right: [-1, 0, 0],
+  top: [0, 1, 0.001],
+  bottom: [0, -1, 0.001],
 }
 
 function XRBridge() {

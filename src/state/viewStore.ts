@@ -29,6 +29,11 @@ interface ViewState {
   mode: 'explore' | 'study'
   question: Question | null
   inXR: boolean
+  /** Show only the parts the learner added (lab.built). */
+  buildMode: boolean
+  anim: { heart: boolean; breath: boolean; bpm: number; rpm: number }
+  /** Camera view request: direction around the current subject. */
+  preset: { name: ViewPreset; n: number }
 
   select(id: string | null, opts?: { focus?: boolean }): void
   hover(id: string | null): void
@@ -43,7 +48,12 @@ interface ViewState {
   answerLocate(clicked: Structure | null): void
   answerIdentify(option: string): void
   setInXR(v: boolean): void
+  setBuildMode(v: boolean): void
+  setAnim(patch: Partial<ViewState['anim']>): void
+  view(name: ViewPreset): void
 }
+
+export type ViewPreset = 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom'
 
 let rngSeed = (Date.now() ^ 0x9e3779b9) >>> 0
 const rng = () => createRng((rngSeed = (rngSeed * 1664525 + 1013904223) >>> 0))()
@@ -59,6 +69,9 @@ export const useView = create<ViewState>()((set, get) => ({
   mode: 'explore',
   question: null,
   inXR: false,
+  buildMode: false,
+  anim: { heart: false, breath: false, bpm: 72, rpm: 14 },
+  preset: { name: 'front', n: 0 },
 
   select(id, opts) {
     set({ selectedId: id })
@@ -87,7 +100,7 @@ export const useView = create<ViewState>()((set, get) => ({
   },
   setMode(m) {
     if (m === 'study' && get().mode !== 'study') useLab.getState().startSession()
-    set({ mode: m, question: null, isolated: null, hidden: [], selectedId: null })
+    set({ mode: m, question: null, isolated: null, hidden: [], selectedId: null, buildMode: false })
   },
 
   ask(mode, system) {
@@ -123,6 +136,15 @@ export const useView = create<ViewState>()((set, get) => ({
 
   setInXR(v) {
     set({ inXR: v })
+  },
+  setBuildMode(v) {
+    set({ buildMode: v, isolated: null })
+  },
+  setAnim(patch) {
+    set((s) => ({ anim: { ...s.anim, ...patch } }))
+  },
+  view(name) {
+    set((s) => ({ preset: { name, n: s.preset.n + 1 } }))
   },
 }))
 

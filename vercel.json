@@ -1,13 +1,15 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/((?!assets/|fonts/|icon\\.svg).*)", "destination": "/index.html" }],
+  "rewrites": [{ "source": "/((?!assets/|fonts/|models/|draco/|icon\\.svg).*)", "destination": "/index.html" }],
   "headers": [
     { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+    { "source": "/models/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }] },
+    { "source": "/draco/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }] },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' blob:; font-src 'self' data:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net; worker-src 'self' blob:" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; font-src 'self' data:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net; worker-src 'self' blob:" },
         { "key": "Permissions-Policy", "value": "xr-spatial-tracking=(self)" },
         { "key": "Referrer-Policy", "value": "no-referrer" }
       ]

@@ -140,3 +140,33 @@ export function tissueLabel(material: string | null): string | null {
   if (!material) return null
   return material.replace(/[-_]\d+$/, '').replace(/[-_]/g, ' ')
 }
+
+export type AreaId = 'head' | 'neck' | 'thorax' | 'abdomen' | 'pelvis' | 'upperLimb' | 'lowerLimb'
+
+export const AREAS: { id: AreaId; label: string }[] = [
+  { id: 'head', label: 'Head' },
+  { id: 'neck', label: 'Neck' },
+  { id: 'thorax', label: 'Thorax' },
+  { id: 'abdomen', label: 'Abdomen' },
+  { id: 'pelvis', label: 'Pelvis' },
+  { id: 'upperLimb', label: 'Upper limb' },
+  { id: 'lowerLimb', label: 'Lower limb' },
+]
+
+/**
+ * Body area from the structure's centre on this life-size model (approximate: long structures that
+ * cross areas are filed under the area that holds their centre).
+ */
+export function areaOf(s: Pick<Structure, 'min' | 'max'>): AreaId {
+  const [x, y] = center(s)
+  if (y >= 1.49) return 'head'
+  if (Math.abs(x) >= 0.155 && y >= 0.72) return 'upperLimb'
+  if (y >= 1.42) return 'neck'
+  if (y >= 1.17) return 'thorax'
+  if (y >= 0.95) return 'abdomen'
+  if (y >= 0.72) return 'pelvis'
+  return 'lowerLimb'
+}
+
+/** Major organs/parts that this male atlas does not model, so the app can say so instead of inventing them. */
+export const NOT_IN_MODEL = ['Skin', 'Larynx (as one organ)', 'Ileum', 'Caecum', 'Rectum and anus', 'Female reproductive organs', 'Breasts']

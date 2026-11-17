@@ -103,3 +103,57 @@ describe('study mode', () => {
     expect(mastery([a!, b!, c!], { ...states, [cardKey(c!)]: { box: 4, due: 20, seen: 3, correct: 3 } })).toEqual({ learned: 1, seen: 3, total: 3 })
   })
 })
+
+describe('body areas', () => {
+  it('files landmark structures in the expected area', async () => {
+    const { areaOf } = await import('./anatomy')
+    const by = (n: string) => areaOf(index.find((s) => s.name === n)!)
+    expect(by('Mandible')).toBe('head')
+    expect(by('Thyroid gland')).toBe('neck')
+    expect(by('Left atrium')).toBe('thorax')
+    expect(by('Stomach')).toBe('abdomen')
+    expect(by('Urinary bladder')).toBe('pelvis')
+    expect(by('Humerus.l')).toBe('upperLimb')
+    expect(by('Radius.r')).toBe('upperLimb')
+    expect(by('Femur.l')).toBe('lowerLimb')
+  })
+})
+
+describe('physiology timing', () => {
+  it('cardiac cycle: atria contract first, then ventricles, then diastole; QRS peak at ventricular onset', async () => {
+    const { cardiac } = await import('./physiology')
+    const T = 60 / 75
+    expect(cardiac(0.05, 75)).toMatchObject({ phase: 'Atrial systole' })
+    expect(cardiac(0.05, 75).atria).toBeGreaterThan(0.9)
+    expect(cardiac(0.25, 75)).toMatchObject({ phase: 'Ventricular systole' })
+    expect(cardiac(0.25, 75).ventricles).toBeGreaterThan(0.9)
+    expect(cardiac(0.6, 75)).toMatchObject({ phase: 'Diastole', atria: 0, ventricles: 0 })
+    const samples = Array.from({ length: 400 }, (_, i) => cardiac((i / 400) * T, 75))
+    const peak = samples.reduce((a, b) => (b.ecg > a.ecg ? b : a))
+    expect(peak.u).toBeCloseTo(0.125, 2)
+    expect(cardiac(T + 0.05, 75).phase).toBe('Atrial systole') // periodic
+  })
+
+  it('breathing: inhale is shorter than exhale and depth spans 0..1', async () => {
+    const { breathing } = await import('./physiology')
+    const T = 60 / 12
+    expect(breathing(0, 12)).toMatchObject({ phase: 'Inhale', depth: 0 })
+    expect(breathing(0.4 * T, 12).depth).toBeCloseTo(1, 5)
+    expect(breathing(0.7 * T, 12).phase).toBe('Exhale')
+    expect(breathing(0.999 * T, 12).depth).toBeLessThan(0.01)
+  })
+})
+
+describe('animation groups', () => {
+  it('finds the heart (chambers + vessels inside it) and both lungs', async () => {
+    const { heartGroups, lungGroups } = await import('@/three/body/Animator')
+    const h = heartGroups(index)
+    expect(h.atria).toEqual(expect.arrayContaining(['cardiovascular:Left atrium', 'cardiovascular:Right atrium']))
+    expect(h.ventricles).toEqual(expect.arrayContaining(['cardiovascular:Left ventricle', 'cardiovascular:Right ventricle']))
+    expect(h.pivot.y).toBeGreaterThan(1.2)
+    expect(h.pivot.y).toBeLessThan(1.4)
+    const lungs = lungGroups(index)
+    expect(lungs.map((l) => l.ids.length).every((n) => n > 5)).toBe(true)
+    expect(lungs.find((l) => l.side === 'left')!.pivot.x).toBeGreaterThan(0) // patient's left is +X
+  })
+})

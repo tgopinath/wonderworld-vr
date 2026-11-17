@@ -1,26 +1,31 @@
 // Floating panel shown only inside VR: the selected structure plus large, ray-friendly buttons.
 // In study mode it shows the current question and the answer options.
 import { RoundedBox, Text } from '@react-three/drei'
-import { type ThreeEvent } from '@react-three/fiber'
-import { useState } from 'react'
+import { useFrame, type ThreeEvent } from '@react-three/fiber'
+import { useEffect, useRef, useState } from 'react'
+import type { Group } from 'three'
 import { SYSTEMS, SYSTEM_BY_ID, displayName } from '@/engine/anatomy'
 import { getStructure } from '@/state/indexData'
 import { useLab } from '@/state/labStore'
 import { useView } from '@/state/viewStore'
+import { usePlayerStore } from '@/state/playerStore'
 import { exitVR, pulse } from './xr'
 import { FONT } from './fonts'
+import { registerVrButton } from './debug'
 
 type V3 = [number, number, number]
 
 function Btn({ label, onPress, position, width = 0.22, active = false, tone = '#1f2b37' }: { label: string; onPress: () => void; position: V3; width?: number; active?: boolean; tone?: string }) {
   const [hover, setHover] = useState(false)
+  const ref = useRef<Group>(null)
+  useEffect(() => (ref.current ? registerVrButton(label, ref.current) : undefined), [label])
   const press = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
     pulse((e as unknown as { pointerPosition?: import('three').Vector3 }).pointerPosition, 0.3, 15)
     onPress()
   }
   return (
-    <group position={position}>
+    <group ref={ref} position={position}>
       <RoundedBox args={[width, 0.065, 0.015]} radius={0.012} onClick={press} onPointerOver={(e) => (e.stopPropagation(), setHover(true))} onPointerOut={() => setHover(false)}>
         <meshStandardMaterial color={active ? '#0f766e' : hover ? '#2a3a49' : tone} roughness={0.6} />
       </RoundedBox>
@@ -38,12 +43,26 @@ export function VrPanel() {
   const q = useView((s) => s.question)
   const isolated = useView((s) => s.isolated)
   const systems = useLab((s) => s.systems)
+  const anim = useView((s) => s.anim)
+  const root = useRef<Group>(null)
+  // The panel travels with the player: front-left at arm's length, turned to face them.
+  useFrame(() => {
+    const g = root.current
+    if (!g) return
+    const p = usePlayerStore.getState()
+    const c = Math.cos(p.yaw)
+    const sn = Math.sin(p.yaw)
+    const ox = -0.55
+    const oz = -0.5
+    g.position.set(p.x + ox * c + oz * sn, 1.2, p.z - ox * sn + oz * c)
+    g.rotation.set(0, p.yaw + 0.7, 0)
+  })
   if (!inXR) return null
   const sel = getStructure(selectedId)
 
   return (
-    <group position={[-0.85, 1.25, 0.55]} rotation-y={0.75}>
-      <RoundedBox args={[0.62, 0.78, 0.012]} radius={0.02} position-z={-0.01}>
+    <group ref={root}>
+      <RoundedBox args={[0.62, 0.9, 0.012]} radius={0.02} position={[0, -0.05, -0.01]}>
         <meshStandardMaterial color="#0e161e" roughness={0.8} transparent opacity={0.94} />
       </RoundedBox>
       <Text font={FONT} fontSize={0.024} color="#5eead4" position={[-0.28, 0.35, 0.002]} anchorX="left">
@@ -72,6 +91,26 @@ export function VrPanel() {
               onPress={() => useLab.getState().setSystem(s.id, { visible: !systems[s.id].visible })}
             />
           ))}
+          <Btn
+            label={anim.heart ? 'Stop heartbeat' : 'Heartbeat'}
+            width={0.27}
+            active={anim.heart}
+            position={[-0.14, -0.3, 0.004]}
+            onPress={() => {
+              if (!anim.heart) useLab.getState().setSystem('cardiovascular', { visible: true })
+              useView.getState().setAnim({ heart: !anim.heart })
+            }}
+          />
+          <Btn
+            label={anim.breath ? 'Stop breathing' : 'Breathing'}
+            width={0.27}
+            active={anim.breath}
+            position={[0.14, -0.3, 0.004]}
+            onPress={() => {
+              if (!anim.breath) useLab.getState().setSystem('visceral', { visible: true })
+              useView.getState().setAnim({ breath: !anim.breath })
+            }}
+          />
         </>
       ) : (
         <>
@@ -92,7 +131,7 @@ export function VrPanel() {
           )}
         </>
       )}
-      <Btn label="Exit VR" width={0.2} tone="#3b1f24" position={[0.17, -0.34, 0.004]} onPress={exitVR} />
+      <Btn label="Exit VR" width={0.2} tone="#3b1f24" position={[0, -0.42, 0.004]} onPress={exitVR} />
     </group>
   )
 }

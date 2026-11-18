@@ -31,7 +31,7 @@ export function LabPage() {
   return (
     <div className="fixed inset-0 flex flex-col">
       <TopBar />
-      <div className="relative flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1 max-md:flex-col">
         <aside className="z-10 hidden w-72 shrink-0 flex-col border-r border-line bg-panel/95 md:flex">{ready && <LeftTabs />}</aside>
         <main className="relative min-w-0 flex-1">
           <ErrorBoundary>
@@ -44,7 +44,7 @@ export function LabPage() {
           </div>
           <MobileSystems />
         </main>
-        <aside className="scroll-thin z-10 w-80 shrink-0 overflow-y-auto border-l border-line bg-panel/95 max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:max-h-[45%] max-md:w-auto max-md:border-l-0 max-md:border-t">
+        <aside className="scroll-thin z-10 w-80 shrink-0 overflow-y-auto border-l border-line bg-panel/95 max-md:h-[40%] max-md:w-auto max-md:border-l-0 max-md:border-t">
           {ready &&
             (mode === 'study' ? (
               <StudyPanel />
@@ -71,9 +71,9 @@ function TopBar() {
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => void detectXRSupport().then(setXr), [])
   return (
-    <header className="z-20 flex h-12 shrink-0 items-center gap-3 border-b border-line bg-panel px-3">
-      <Logo />
-      <div className="ml-2 flex rounded-md border border-line p-0.5" role="tablist" aria-label="Mode">
+    <header className="z-20 flex h-12 shrink-0 items-center gap-2 border-b border-line bg-panel px-3 sm:gap-3">
+      <Logo compact />
+      <div className="flex shrink-0 rounded-md border border-line p-0.5 sm:ml-2" role="tablist" aria-label="Mode">
         {(['explore', 'study'] as const).map((m) => (
           <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`rounded px-3 py-1 text-[13px] font-medium capitalize ${mode === m ? 'bg-panel-2 text-ink' : 'text-mute hover:text-ink'}`}>
             {m}
@@ -81,7 +81,7 @@ function TopBar() {
         ))}
       </div>
       {mode === 'explore' && <SearchBox />}
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         {err && <span className="mr-2 text-xs text-warn">{err}</span>}
         {(xr === 'immersive-vr' || xr === 'emulated') && (
           <Button
@@ -101,7 +101,7 @@ function TopBar() {
             Enter VR{xr === 'emulated' ? ' (emulator)' : ''}
           </Button>
         )}
-        <Link to="/about" className="px-2 text-[13px] text-mute hover:text-ink">
+        <Link to="/about" className="px-2 text-[13px] text-mute hover:text-ink max-sm:hidden">
           Sources
         </Link>
       </div>
@@ -123,7 +123,7 @@ function SearchBox() {
     setOpen(false)
   }
   return (
-    <div className="relative w-full max-w-sm">
+    <div className="relative min-w-0 flex-1 sm:max-w-sm">
       <input
         type="search"
         value={q}
@@ -483,7 +483,7 @@ function Toolbar() {
   const isolated = useView((s) => s.isolated)
   const hidden = useView((s) => s.hidden)
   return (
-    <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-wrap items-center whitespace-nowrap md:flex-nowrap justify-center gap-1 rounded-lg border border-line bg-panel/95 p-1 shadow-xl max-md:bottom-[calc(45%+0.5rem)]" role="toolbar" aria-label="View tools">
+    <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-wrap items-center whitespace-nowrap md:flex-nowrap justify-center gap-1 rounded-lg border border-line bg-panel/95 p-1 shadow-xl" role="toolbar" aria-label="View tools">
       {AXES.map((a) => (
         <button key={a.id} onClick={() => setClip({ axis: a.id })} aria-pressed={clip.axis === a.id} className={`rounded px-2.5 py-1 text-[12px] ${clip.axis === a.id ? 'bg-panel-2 text-ink' : 'text-mute hover:text-ink'}`}>
           {a.label}

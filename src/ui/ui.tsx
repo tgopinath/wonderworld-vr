@@ -12,11 +12,11 @@ export function Button({ variant = 'ghost', size = 'md', className = '', ...rest
   return <button {...rest} className={`inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors disabled:pointer-events-none disabled:opacity-40 ${v} ${s} ${className}`} />
 }
 
-export function Logo() {
+export function Logo({ compact = false }: { compact?: boolean }) {
   return (
-    <Link to="/" className="flex items-center gap-2 text-ink" aria-label="Anatomy Lab home">
+    <Link to="/" className="flex shrink-0 items-center gap-2 text-ink" aria-label="Anatomy Lab home">
       <img src="/icon.svg" alt="" width={26} height={26} />
-      <span className="text-[15px] font-semibold tracking-tight">Anatomy Lab</span>
+      <span className={`whitespace-nowrap text-[15px] font-semibold tracking-tight ${compact ? 'max-sm:hidden' : ''}`}>Anatomy Lab</span>
     </Link>
   )
 }
